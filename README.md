@@ -4,6 +4,38 @@ ToolGuard is an offline Node 22 CLI that statically scans MCP configurations and
 tool manifests. It has no runtime dependencies, never starts configured
 commands, and never contacts configured URLs.
 
+## Setup
+
+Use Node 22. With `nvm`, the checked-in version file can be selected with:
+
+```sh
+nvm use
+npm ci
+```
+
+`npm ci` is reproducible and installs no runtime packages. If `nvm` is not
+available, install Node 22 directly and confirm it with `node --version`.
+
+## Run
+
+Run the CLI through Node, or use the package bin after a local npm link:
+
+```sh
+node bin/toolguard.js scan examples/clean --format terminal
+node bin/toolguard.js scan examples/malicious --format json --output report.json
+```
+
+The scan is offline by design: configured commands are never executed and URLs
+are never fetched.
+
+## Test
+
+Run the complete offline test suite with:
+
+```sh
+npm test
+```
+
 ## Usage
 
 ```sh
