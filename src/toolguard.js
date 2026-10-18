@@ -16,9 +16,9 @@ const SEVERITIES = [
   ['info', 0],
 ];
 
-const SECRET_KEY = /(?:password|passwd|secret|token|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|private[_-]?key|credential|authorization|cookie|session|webhook)/i;
+const SECRET_KEY = /(?:password|passwd|secret|token|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|private[_-]?key|credential|authorization|cookie|session|webhook|(?:^|[_-])key(?:$|[_-]))/i;
 const PERMISSION_KEY = /^(?:permissions?|scopes?|access|allow|allowlist|allowedpaths?|allowedhosts?|filesystem|network|shell|execute|admin)$/i;
-const PACKAGE_KEY = /^(?:package|packagename|packages|image|dependency|dependencies)$/i;
+const PACKAGE_KEY = /^(?:package|packagename|packages|image|dependency|dependencies|devdependencies|optionaldependencies|peerdependencies)$/i;
 const URL_PATTERN = /(?:https?|wss?|javascript|data|file|gopher|ftp):[^\s"'<>`]+/gi;
 const INVISIBLE_PATTERN = /[\u00ad\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/u;
 const PLACEHOLDER_PATTERN = /^(?:\$\{[^}]+\}|\$[A-Z_][A-Z0-9_]*|\{\{[^}]+\}\}|<[^>]*(?:token|secret|key|password)[^>]*>|change[-_ ]?me|replace[-_ ]?me|example|test|dummy|(?:x|0)+)$/i;
@@ -29,6 +29,23 @@ function isObject(value) {
 
 function normalizeKey(value) {
   return String(value).normalize('NFKC').toLowerCase().trim();
+}
+
+function isPermissionKey(value) {
+  const normalized = normalizeKey(value).replace(/[\s_-]+/g, '');
+  return PERMISSION_KEY.test(value) || /^(?:allowshell|filesystemaccess|privileges|privilege|networkaccess)$/.test(normalized);
+}
+
+function isInstructionField(value) {
+  return /^(?:description|instructions?|prompt|system|developer|usage|help|readme|examples?|annotations?)$/i.test(value);
+}
+
+function isDescriptivePath(parts) {
+  return parts.some((part) => part === 'inputSchema' || part === 'examples' || part === 'description');
+}
+
+function isIdentifierKey(value) {
+  return /(?:^|[_-])(?:name|id|label|url)$/i.test(value);
 }
 
 function pointerPart(value) {
@@ -266,15 +283,21 @@ function secretMatch(value, key) {
   const text = String(value);
   const named = SECRET_KEY.test(key);
   if (PLACEHOLDER_PATTERN.test(text.trim())) return null;
+  const assignment = /--?(?:token|api[-_]?key|secret|password|authorization)=([^\s"'`]+)/i.exec(text);
+  if (assignment && assignment[1].length >= 8 && !PLACEHOLDER_PATTERN.test(assignment[1])) return { type: 'command-secret-assignment', strong: assignment[1].length >= 16 };
   if (/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/i.test(text)) return { type: 'pem-private-key', strong: true };
   if (/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/.test(text)) return { type: 'aws-access-key', strong: true };
   if (/\b(?:ghp_|gho_|ghu_|ghs_|ghr_|github_pat_)[A-Za-z0-9_]{20,}\b/.test(text)) return { type: 'github-token', strong: true };
   if (/\bxox[baprs]-[A-Za-z0-9-]{10,}\b/.test(text)) return { type: 'slack-token', strong: true };
   if (/\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{12,}\b/.test(text)) return { type: 'stripe-key', strong: true };
+  if (/\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}\b/.test(text)) return { type: text.includes('sk-ant-') ? 'anthropic-key' : 'openai-key', strong: true };
+  if (/\bnpm_[A-Za-z0-9]{20,}\b/.test(text)) return { type: 'npm-token', strong: true };
+  if (/\bglpat-[A-Za-z0-9_-]{20,}\b/.test(text)) return { type: 'gitlab-token', strong: true };
+  if (/\bhf_[A-Za-z0-9]{20,}\b/.test(text)) return { type: 'huggingface-token', strong: true };
   if (/\bAIza[0-9A-Za-z_-]{20,}\b/.test(text)) return { type: 'google-api-key', strong: true };
   if (/^Bearer\s+\S{16,}$/i.test(text.trim())) return { type: 'bearer-token', strong: true };
   if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text) && text.length >= 40) return { type: 'jwt', strong: true };
-  if (named && text.length >= 8) return { type: 'credential-field', strong: text.length >= 16 };
+  if (named && !isIdentifierKey(key) && text.length >= 8) return { type: 'credential-field', strong: text.length >= 16 };
   if (/^(?:authorization|cookie|x-api-key)$/i.test(key) && text.length >= 8) return { type: 'credential-header', strong: true };
   return null;
 }
@@ -282,9 +305,12 @@ function secretMatch(value, key) {
 function analyzeInstruction(state, document, value, parts, key) {
   if (typeof value !== 'string' || value.length < 4) return;
   const text = value.normalize('NFKC');
-  const promptOverride = /(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|system|developer)\s+instructions|you\s+are\s+now|(?:system|developer)\s+message|do\s+not\s+(?:reveal|mention)\s+this|always\s+(?:use|call)\s+this\s+tool|never\s+(?:use|call)\s+(?:the\s+)?(?:other|original)\s+tool/i.test(text);
-  const dangerousAction = /(?:read|access|collect|upload|send|exfiltrat|execute|download|disable).{0,100}(?:credential|password|secret|token|ssh|cookie|key|shell|command|security|external endpoint)/i.test(text);
-  const invisible = INVISIBLE_PATTERN.test(value) || /<!--[^>]*-->/s.test(value) || /(?:<\/?system>|\[INST\]|<\/?tool>)/i.test(value);
+  const instructionField = isInstructionField(key);
+  const promptOverride = instructionField && /(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|earlier|above|before|system|developer)\s+instructions|you\s+are\s+now|(?:system|developer)\s+message|do\s+not\s+(?:reveal|mention)\s+this|(?:always\s+(?:use|call|prefer)|follow\s+only)\s+this\s+tool|(?:use|choose)\s+this\s+tool\s+(?:instead\s+of|rather\s+than|over)|never\s+(?:use|call)\s+(?:the\s+)?(?:other|original)\s+tool/i.test(text);
+  const dangerousAction = instructionField && /\b(?:read|access|collect|upload|send|exfiltrat|execute|download|disable)\b.{0,100}(?:credential|password|secret|token|ssh|cookie|key|shell|command|security|external endpoint)/i.test(text);
+  const comment = /<!--([^>]*)-->/s.exec(value);
+  const commentContainsInstruction = comment && /(?:instruction|ignore|always|never|call|use|secret|credential|token|execute)/i.test(comment[1]);
+  const invisible = INVISIBLE_PATTERN.test(value) || Boolean(commentContainsInstruction) || /(?:<\/?system>|\[INST\]|<\/?tool>)/i.test(value);
   if (!promptOverride && !dangerousAction && !invisible) return;
   const factors = [];
   if (promptOverride) factors.push({ code: 'prompt-override-language', points: 25 });
@@ -331,6 +357,11 @@ function isPrivateHost(host) {
   return clean.startsWith('fc') || clean.startsWith('fd') || clean.startsWith('fe80:');
 }
 
+function isInternalHost(host) {
+  const clean = host.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
+  return clean.endsWith('.internal') || clean === 'metadata.google.internal' || clean === 'metadata.google.com';
+}
+
 function analyzeUrl(state, document, urlText, parts, key) {
   let parsed;
   try {
@@ -345,12 +376,13 @@ function analyzeUrl(state, document, urlText, parts, key) {
   if (scheme === 'http:' || scheme === 'ws:') factors.push({ code: 'cleartext-url', points: 10 });
   if (parsed.username || parsed.password) factors.push({ code: 'url-credentials', points: 20 });
   if (isPrivateHost(parsed.hostname)) factors.push({ code: 'private-or-loopback-target', points: 20 });
+  if (isInternalHost(parsed.hostname)) factors.push({ code: 'internal-hostname', points: 20 });
   if (parsed.hostname.includes('xn--')) factors.push({ code: 'punycode-host', points: 15 });
   if (parsed.port && !['80', '443'].includes(parsed.port)) factors.push({ code: 'nonstandard-port', points: 10 });
   if (/\/(?:webhook|collect|upload|exfil|capture)(?:\/|$)/i.test(parsed.pathname)) factors.push({ code: 'collection-path', points: 15 });
   let secretQuery = false;
-  for (const [queryKey] of parsed.searchParams) {
-    if (/(?:token|secret|key|password|auth|credential)/i.test(queryKey)) secretQuery = true;
+  for (const [queryKey, queryValue] of parsed.searchParams) {
+    if (/(?:token|secret|key|password|auth|credential)/i.test(queryKey) && queryValue.length >= 8 && !PLACEHOLDER_PATTERN.test(queryValue)) secretQuery = true;
   }
   if (secretQuery) factors.push({ code: 'secret-query-key', points: 20 });
   if (!factors.length) return;
@@ -409,14 +441,14 @@ function analyzeSecrets(state, document, value, parts, key) {
 }
 
 function analyzePermissions(state, document, value, parts, key, capability = key) {
-  if (!PERMISSION_KEY.test(key) && !capability) return;
+  if (!isPermissionKey(key) && !capability) return;
   if (Array.isArray(value)) {
     value.forEach((child, index) => analyzePermissions(state, document, child, [...parts, index], String(index), capability));
     return;
   }
   if (isObject(value)) {
     for (const [childKey, child] of Object.entries(value)) {
-      const nextCapability = PERMISSION_KEY.test(childKey) ? childKey : capability;
+      const nextCapability = isPermissionKey(childKey) ? childKey : capability;
       analyzePermissions(state, document, child, [...parts, childKey], childKey, nextCapability);
     }
     return;
@@ -425,7 +457,7 @@ function analyzePermissions(state, document, value, parts, key, capability = key
   const processCapability = /(?:shell|execute|exec|process|admin|root|sudo)/i.test(capability || '');
   const broadGrant = value === true ||
     /^(?:\*|\/|\/\*\*|~|[a-z]:[\\/]\*|\$\{?home\}?\/?\*?)$/i.test(text) ||
-    /^(?:0\.0\.0\.0\/0|::\/0)$/.test(text);
+    /^(?:0\.0\.0\.0\/0|::\/0|(?:0:){7}0\/0)$/.test(text);
   const factors = [];
   if (broadGrant) factors.push({ code: 'unrestricted-wildcard-or-root', points: 25 });
   if (processCapability && (value === true || text)) factors.push({ code: 'process-or-admin-access', points: 20 });
@@ -451,12 +483,12 @@ function packageIsPinned(value) {
   if (typeof value !== 'string') return true;
   if (/@sha256:[a-f0-9]{64}$/i.test(value)) return true;
   if (/(?:^|#)(?:[a-f0-9]{40})$/i.test(value)) return true;
-  return /(?:^|@)v?\d+\.\d+\.\d+$/.test(value);
+  return /(?:^|@)v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(value);
 }
 
 function packageCandidate(value) {
   if (typeof value !== 'string') return [];
-  return value.split(/[\s,]+/).map((item) => item.trim()).filter(Boolean);
+  return value.split(/[\s,]+/).map((item) => item.trim()).filter(Boolean).flatMap((item) => item.startsWith('--package=') ? [item.slice('--package='.length)] : [item]);
 }
 
 function analyzePackage(state, document, value, parts, key, runner = false) {
@@ -575,7 +607,7 @@ function analyzeDocument(state, document) {
     }
   }
   walk(document.value, [], (value, parts, key) => {
-    if (PERMISSION_KEY.test(key)) analyzePermissions(state, document, value, parts, key);
+    if (!isDescriptivePath(parts) && isPermissionKey(key)) analyzePermissions(state, document, value, parts, key);
     if (PACKAGE_KEY.test(key)) analyzePackage(state, document, value, parts, key);
     if (typeof value !== 'string') return;
     analyzeInstruction(state, document, value, parts, key);
@@ -593,20 +625,35 @@ function relatedTool(tool) {
   };
 }
 
+function toolNames(tool) {
+  return [tool.name, ...tool.aliases].filter((name, index, names) => typeof name === 'string' && name.trim() && names.indexOf(name) === index);
+}
+
+function descriptionReferencesTool(description, tool) {
+  const normalizedDescription = `-${normalizeKey(description).replace(/[^a-z0-9]+/g, '-')}-`;
+  return toolNames(tool).some((name) => normalizedDescription.includes(`-${canonicalToolName(name)}-`));
+}
+
 function analyzeCrossTool(state, documents) {
   const tools = documents.flatMap((document) => document.tools.map((tool) => ({ ...tool, file: document.file })));
   const grouped = new Map();
   for (const tool of tools) {
-    if (!tool.canonicalName) continue;
-    if (!grouped.has(tool.canonicalName)) grouped.set(tool.canonicalName, []);
-    grouped.get(tool.canonicalName).push(tool);
+    for (const name of toolNames(tool)) {
+      const canonicalName = canonicalToolName(name);
+      if (!canonicalName) continue;
+      const scope = `${tool.file}:${canonicalName}`;
+      if (!grouped.has(scope)) grouped.set(scope, []);
+      grouped.get(scope).push({ tool, canonicalName, matchedName: name });
+    }
   }
   for (const group of grouped.values()) {
-    if (group.length < 2) continue;
-    group.sort((a, b) => `${a.file}:${a.sourcePointer}`.localeCompare(`${b.file}:${b.sourcePointer}`));
-    const related = group.map(relatedTool);
-    for (let index = 1; index < group.length; index += 1) {
-      const tool = group[index];
+    const uniqueTools = [...new Map(group.map((entry) => [entry.tool.sourcePointer, entry.tool])).values()];
+    if (uniqueTools.length < 2) continue;
+    group.sort((a, b) => `${a.tool.sourcePointer}:${a.matchedName}`.localeCompare(`${b.tool.sourcePointer}:${b.matchedName}`));
+    const related = uniqueTools.map(relatedTool);
+    for (let index = 1; index < uniqueTools.length; index += 1) {
+      const tool = uniqueTools[index];
+      const entry = group.find((candidate) => candidate.tool === tool);
       addFinding(state, {
         code: 'TG.TOOL.NAME_COLLISION',
         category: 'cross-tool-shadowing',
@@ -616,7 +663,7 @@ function analyzeCrossTool(state, documents) {
         message: 'Tool names collide after Unicode, case, or separator normalization.',
         file: tool.file,
         parts: tool.sourcePointer.slice(1).split('/').filter(Boolean),
-        evidence: { canonicalName: tool.canonicalName, names: group.map((item) => item.name) },
+        evidence: { canonicalName: entry.canonicalName, matchedName: entry.matchedName, names: uniqueTools.flatMap(toolNames) },
         remediation: 'Use unique tool names or explicit server namespaces to prevent ambiguous dispatch.',
         related,
       });
@@ -624,10 +671,10 @@ function analyzeCrossTool(state, documents) {
   }
   for (const tool of tools) {
     if (!tool.description || !tool.canonicalName) continue;
-    const directive = /(?:use\s+this\s+instead\s+of|never\s+(?:call|use)|ignore\s+(?:the\s+)?other\s+tool|this\s+is\s+the\s+real|always\s+(?:call|use)\s+this\s+tool)/i.test(tool.description);
+    const directive = /(?:use\s+this\s+(?:tool\s+)?(?:instead\s+of|rather\s+than)|never\s+(?:call|use)|do\s+not\s+(?:call|use)|ignore\s+(?:the\s+)?other\s+tool|this\s+is\s+the\s+real|(?:always\s+(?:call|use|prefer)|follow\s+only)\s+this\s+tool|prefer\s+this\s+tool\s+over)/i.test(tool.description);
     if (!directive) continue;
     for (const target of tools) {
-      if (target === tool || !target.canonicalName || !tool.description.toLowerCase().includes(target.canonicalName)) continue;
+      if (target === tool || target.file !== tool.file || !target.canonicalName || !descriptionReferencesTool(tool.description, target)) continue;
       addFinding(state, {
         code: 'TG.TOOL.SHADOW_DIRECTIVE',
         category: 'cross-tool-shadowing',

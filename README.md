@@ -18,11 +18,13 @@ available, install Node 22 directly and confirm it with `node --version`.
 
 ## Run
 
-Run the CLI through Node, or use the package bin after a local npm link:
+Run the CLI through Node, or create a local npm link and use the package bin:
 
 ```sh
 node bin/toolguard.js scan examples/clean --format terminal
 node bin/toolguard.js scan examples/malicious --format json --output report.json
+npm link
+toolguard scan examples/clean --format terminal
 ```
 
 The scan is offline by design: configured commands are never executed and URLs
@@ -38,11 +40,13 @@ npm test
 
 ## Usage
 
+The following commands are runnable from a clean clone:
+
 ```sh
-node bin/toolguard.js scan path/to/config.json
-node bin/toolguard.js scan configs/ --format json --output report.json
-node bin/toolguard.js scan configs/ --format html --output report.html
-cat manifest.json | node bin/toolguard.js scan --stdin --stdin-name manifest.json
+node bin/toolguard.js scan test/fixtures/clean.json
+node bin/toolguard.js scan examples/clean --format json --output toolguard-report.json
+node bin/toolguard.js scan examples/clean --format html --output toolguard-report.html
+cat test/fixtures/clean.json | node bin/toolguard.js scan --stdin --stdin-name manifest.json
 ```
 
 Directories are scanned recursively for `.json` files. `.git`, `node_modules`,
@@ -65,8 +69,9 @@ stable machine-readable report. `--format html` emits a self-contained report
 with inline CSS and no external resources.
 
 Use `--root DIR` to control the relative paths shown in reports. Output is
-deterministic: it contains no timestamps, hostnames, network data, or random
-identifiers.
+deterministic: it contains no timestamps, runtime host information, network
+responses, or random identifiers. Findings may include host and scheme metadata
+extracted from configured URLs.
 
 ## Checks
 
@@ -76,7 +81,7 @@ docker build -t toolguard .
 docker run --rm --network none toolguard npm test
 ```
 
-The reproducible Docker test gate is:
+The Docker test gate is:
 
 ```sh
 docker build -t toolguard . && docker run --rm --network none toolguard npm test
@@ -98,8 +103,10 @@ docker run --rm --network=none toolguard:22-offline npm test
 
 ## GitHub Actions
 
-This short workflow runs the tests and scans a checked-in MCP configuration in
-CI. Replace `examples/clean` with the directory your project wants to guard.
+To enable this in a consuming repository, save the following as
+`.github/workflows/toolguard.yml`. It runs the tests and scans a checked-in MCP
+configuration. Replace `examples/clean` with the directory your project wants
+to guard.
 
 ```yaml
 name: ToolGuard
