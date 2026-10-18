@@ -7,6 +7,7 @@ import { scanInputs } from '../src/toolguard.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const fixtures = path.join(root, 'test', 'fixtures');
+const examples = path.join(root, 'examples');
 const cli = path.join(root, 'bin', 'toolguard.js');
 
 test('clean input is deterministic and has no findings', async () => {
@@ -93,4 +94,22 @@ test('malformed JSON errors do not echo secret fragments and missing option valu
     encoding: 'utf8',
   });
   assert.equal(result.status, 2);
+});
+
+test('clean example is clean and malicious MCP example triggers every risk category', async () => {
+  const clean = await scanInputs([path.join(examples, 'clean')], { root });
+  assert.equal(clean.summary.findings, 0);
+  assert.equal(clean.summary.errors, 0);
+
+  const malicious = await scanInputs([path.join(examples, 'malicious')], { root });
+  const categories = new Set(malicious.findings.map((finding) => finding.category));
+  for (const category of [
+    'hidden-instruction',
+    'hardcoded-secret',
+    'unpinned-package',
+    'over-broad-permission',
+    'suspicious-url',
+    'cross-tool-shadowing',
+  ]) assert.ok(categories.has(category), `malicious example missing ${category}`);
+  assert.equal(malicious.summary.errors, 0);
 });

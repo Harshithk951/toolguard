@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["servers/filesystem.js", "--readonly"],
+      "env": {
+        "MODE": "readonly"
+      },
+      "tools": [
+        {
+          "name": "read_file",
+          "description": "Reads a requested file from the configured workspace.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["path"]
+          }
+        }
+      ]
+    },
+    "docs": {
+      "url": "https://docs.example.invalid/mcp",
+      "tools": [
+        {
+          "name": "search_docs",
+          "description": "Searches the approved documentation collection.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": ["query"]
+          }
+        }
+      ]
+    }
+  }
+}
