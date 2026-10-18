@@ -72,15 +72,26 @@ identifiers.
 
 ```sh
 npm test
-docker build --pull=false --network=none -t toolguard:22-offline .
-docker run --rm --network=none toolguard:22-offline --help
+docker build -t toolguard .
+docker run --rm --network none toolguard npm test
 ```
 
-The reproducible one-command Docker gate is:
+The reproducible Docker test gate is:
 
 ```sh
-docker build --pull=false --network=none -t toolguard:22-offline . && docker run --rm --network=none --entrypoint node toolguard:22-offline --test
+docker build -t toolguard . && docker run --rm --network none toolguard npm test
 ```
 
-The base image must already be available locally because the build is explicitly
-network-disabled.
+To run the CLI inside the image, provide the complete command because the
+Dockerfile uses `CMD` rather than an entrypoint:
+
+```sh
+docker run --rm --network none toolguard node bin/toolguard.js scan examples/clean --format terminal
+```
+
+For a fully offline rebuild using a locally cached base image, use:
+
+```sh
+docker build --pull=false --network=none -t toolguard:22-offline .
+docker run --rm --network=none toolguard:22-offline npm test
+```

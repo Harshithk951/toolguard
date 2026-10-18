@@ -4,5 +4,4 @@ WORKDIR /app
 COPY --chown=node:node . .
 
 USER node
-ENTRYPOINT ["node", "/app/bin/toolguard.js"]
-CMD ["--help"]
+CMD ["node", "bin/toolguard.js", "--help"]
