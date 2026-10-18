@@ -57,6 +57,20 @@ test('HTML output is standalone and contains no external resources', () => {
   assert.doesNotMatch(html, /<(?:script|link|img|iframe)[^>]+(?:src|href)=/i);
 });
 
+test('HTML report presents severity, grouped findings, and safe remediation text', () => {
+  const result = spawnSync(process.execPath, [cli, 'scan', path.join(fixtures, 'risky.json'), '--format', 'html'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 1);
+  const html = result.stdout;
+  assert.match(html, /Maximum severity score/);
+  assert.match(html, /Findings by file and tool/);
+  assert.match(html, /class="badge (?:critical|high|medium|low|info)"/);
+  assert.match(html, /<strong>Remediation:<\/strong>/);
+  assert.doesNotMatch(html, /ghp_abcdefghijklmnopqrstuvwxyz1234567890/);
+});
+
 test('stdin scans do not depend on network access', () => {
   const input = readFileSync(path.join(fixtures, 'clean.json'), 'utf8');
   const result = spawnSync(process.execPath, [cli, 'scan', '--stdin', '--stdin-name', 'piped.json', '--format', 'json'], {

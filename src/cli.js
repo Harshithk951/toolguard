@@ -94,22 +94,67 @@ function terminalReport(report) {
   return `${lines.join('\n')}\n`;
 }
 
+function findingTool(report, finding) {
+  return report.tools
+    .filter((tool) => tool.file === finding.source.file && (finding.source.pointer === tool.pointer || finding.source.pointer.startsWith(`${tool.pointer}/`)))
+    .sort((a, b) => b.pointer.length - a.pointer.length)[0] ?? null;
+}
+
+function groupedFindings(report) {
+  const files = new Map();
+  for (const finding of report.findings) {
+    if (!files.has(finding.source.file)) files.set(finding.source.file, new Map());
+    const tools = files.get(finding.source.file);
+    const tool = findingTool(report, finding);
+    const label = tool?.name ? `Tool: ${tool.name}` : tool?.server ? `Server: ${tool.server}` : 'Server and configuration settings';
+    if (!tools.has(label)) tools.set(label, []);
+    tools.get(label).push(finding);
+  }
+  return files;
+}
+
+function findingCard(finding, tool) {
+  const remediation = (finding.remediation || 'Review this finding.').replace(/\s+/g, ' ').trim();
+  return `<article class="finding ${escapeHtml(finding.severity)}">
+  <div class="finding-topline"><span class="badge ${escapeHtml(finding.severity)}">${escapeHtml(finding.severity)}</span><span class="score">Score ${escapeHtml(finding.score)}/100</span></div>
+  <h5>${escapeHtml(finding.ruleId)}</h5>
+  <p>${escapeHtml(finding.message)}</p>
+  <p class="remediation"><strong>Remediation:</strong> ${escapeHtml(remediation)}</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>${escapeHtml(finding.source.file)}${escapeHtml(finding.source.pointer)}</code></dd></div><div><dt>Category</dt><dd>${escapeHtml(finding.category)}</dd></div><div><dt>Confidence</dt><dd>${escapeHtml(finding.confidence)}</dd></div>${tool?.server ? `<div><dt>Server</dt><dd>${escapeHtml(tool.server)}</dd></div>` : ''}</dl>
+</article>`;
+}
+
+function groupedFindingSections(report) {
+  const groups = groupedFindings(report);
+  if (!groups.size) return '<div class="empty-state"><strong>No findings.</strong><span>The scanned inputs passed the configured checks.</span></div>';
+  return [...groups.entries()].map(([file, tools]) => {
+    const anchor = `file-${String(file).replace(/[^a-z0-9]+/gi, '-') || 'unknown'}`;
+    return `<section class="file-group" aria-labelledby="${anchor}" id="group-${anchor}">
+  <h3 id="${anchor}"><span class="section-kicker">File</span><code>${escapeHtml(file)}</code></h3>
+  ${[...tools.entries()].map(([label, findings]) => `<section class="tool-group"><h4>${escapeHtml(label)}</h4>${findings.map((finding) => findingCard(finding, findingTool(report, finding))).join('\n')}</section>`).join('\n')}
+</section>`;
+  }).join('\n');
+}
+
 function htmlReport(report) {
   const summary = report.summary;
-  const findingRows = report.findings.length
-    ? report.findings.map((finding) => `<article class="finding ${escapeHtml(finding.severity)}"><h3>${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.ruleId)} · ${escapeHtml(finding.score)}/100</h3><p>${escapeHtml(finding.message)}</p><code>${escapeHtml(finding.source.file)}${escapeHtml(finding.source.pointer)}</code><p class="meta">${escapeHtml(finding.category)} · confidence ${escapeHtml(finding.confidence)}</p></article>`).join('\n')
-    : '<p class="clean">No findings.</p>';
+  const status = summary.errors ? 'error' : summary.findings ? 'review' : 'pass';
+  const statusLabel = summary.errors ? 'Input errors' : summary.findings ? 'Review required' : 'No findings';
+  const severityCards = ['critical', 'high', 'medium', 'low', 'info'].map((severity) => `<div class="severity-count"><span class="badge ${severity}">${severity}</span><strong>${summary.bySeverity[severity]}</strong></div>`).join('');
   const errors = report.errors.length
-    ? `<section><h2>Input errors</h2>${report.errors.map((error) => `<p class="error"><strong>${escapeHtml(error.code)}</strong> ${escapeHtml(error.file)}: ${escapeHtml(error.message)}</p>`).join('')}</section>`
+    ? `<section class="input-errors" aria-labelledby="input-errors-heading"><h2 id="input-errors-heading">Input errors</h2>${report.errors.map((error) => `<p><strong>${escapeHtml(error.code)}</strong> <code>${escapeHtml(error.file)}</code>: ${escapeHtml(error.message)}</p>`).join('')}</section>`
     : '';
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ToolGuard report</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>ToolGuard security report</title>
 <style>
-:root{color-scheme:light dark;font-family:system-ui,-apple-system,sans-serif}body{max-width:960px;margin:2rem auto;padding:0 1rem;line-height:1.45}h1{margin-bottom:.25rem}.muted,.meta{opacity:.72}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin:1.5rem 0}.card{border:1px solid #8885;border-radius:.6rem;padding:.8rem}.number{font-size:1.6rem;font-weight:700;display:block}.finding{border-left:5px solid #888;padding:.7rem 1rem;margin:1rem 0;background:#8881}.finding.critical{border-color:#d22}.finding.high{border-color:#e65}.finding.medium{border-color:#d99b00}.finding.low{border-color:#3978c5}.finding.info{border-color:#777}.finding h3{margin:.1rem 0}.finding code{overflow-wrap:anywhere}.error{color:#d66}.clean{color:#39884a;font-weight:700}</style></head>
-<body><h1>ToolGuard report</h1><p class="muted">Scanner ${escapeHtml(report.scannerVersion)} · rule set ${escapeHtml(report.ruleSetVersion)}</p>
-<section class="summary"><div class="card"><span class="number">${summary.files}</span>files</div><div class="card"><span class="number">${summary.mcpServers}</span>MCP servers</div><div class="card"><span class="number">${summary.tools}</span>tools</div><div class="card"><span class="number">${summary.findings}</span>findings</div><div class="card"><span class="number">${summary.maxScore}/100</span>maximum score</div><div class="card"><span class="number">${summary.errors}</span>input errors</div></section>
-<section><h2>Findings</h2>${findingRows}</section>${errors}
-</body></html>
+:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb;color:#172033;line-height:1.5;--surface:#fff;--surface-muted:#eef2f8;--border:#d7deea;--muted:#58657a;--shadow:0 12px 36px #27324d14;--critical:#b42318;--high:#c4320a;--medium:#9a6700;--low:#175cd3;--info:#475467;--focus:#175cd3}
+@media(prefers-color-scheme:dark){:root{background:#101522;color:#edf2fa;--surface:#171e2d;--surface-muted:#202a3b;--border:#354157;--muted:#aab6c9;--shadow:0 12px 36px #0006;--critical:#ff8178;--high:#ff9b70;--medium:#f5c451;--low:#84adff;--info:#b8c4d8;--focus:#9dbdff}}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:0 auto;padding:clamp(1rem,4vw,3rem) clamp(1rem,4vw,2rem)}h1,h2,h3,h4,h5,p{margin-top:0}h1{font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-.04em;margin-bottom:.35rem}h2{font-size:1.35rem;margin-bottom:1rem}h3{font-size:1rem;margin-bottom:1rem}h4{font-size:1rem;margin-bottom:.8rem}h5{font-size:1rem;margin:0 0 .45rem}.muted,.meta{color:var(--muted)}code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;overflow-wrap:anywhere}.hero{display:flex;align-items:stretch;justify-content:space-between;gap:1.5rem;margin-bottom:1.5rem}.eyebrow,.section-kicker{color:var(--muted);font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.eyebrow{margin-bottom:.4rem}.score-card{min-width:190px;padding:1rem 1.15rem;border:1px solid var(--border);border-radius:1rem;background:var(--surface);box-shadow:var(--shadow);text-align:right}.score-label{display:block;color:var(--muted);font-size:.78rem}.score-value{display:block;font-size:2.3rem;letter-spacing:-.05em;line-height:1.1}.score-value small{font-size:.95rem;color:var(--muted);letter-spacing:0}.status{display:inline-block;margin-top:.55rem;font-size:.78rem;font-weight:800}.status.pass{color:#087443}.status.review{color:var(--high)}.status.error{color:var(--critical)}.summary-panel{padding:1rem;border:1px solid var(--border);border-radius:1rem;background:var(--surface);box-shadow:var(--shadow);margin-bottom:2rem}.summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.75rem}.summary-card{padding:.85rem;border:1px solid var(--border);border-radius:.7rem;background:var(--surface-muted)}.summary-card strong{display:block;font-size:1.55rem;line-height:1.15}.summary-card span{color:var(--muted);font-size:.82rem}.severity-row{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}.severity-count{display:flex;align-items:center;gap:.4rem}.severity-count strong{font-size:1rem}.badge{display:inline-flex;align-items:center;min-height:1.5rem;padding:.18rem .55rem;border-radius:999px;font-size:.72rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase}.badge.critical{background:#fee4e2;color:var(--critical)}.badge.high{background:#ffeadf;color:var(--high)}.badge.medium{background:#fff4cc;color:var(--medium)}.badge.low{background:#e0ecff;color:var(--low)}.badge.info{background:#eaecf0;color:var(--info)}.file-group{margin:0 0 2rem}.file-group>h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:.65rem;padding-bottom:.7rem;border-bottom:2px solid var(--border)}.section-kicker{font-size:.65rem}.tool-group{margin:1rem 0 1.25rem 1rem}.finding{padding:1rem 1.1rem;margin:.75rem 0;border:1px solid var(--border);border-left:.3rem solid var(--info);border-radius:.7rem;background:var(--surface);box-shadow:0 4px 14px #27324d0b}.finding.critical{border-left-color:var(--critical)}.finding.high{border-left-color:var(--high)}.finding.medium{border-left-color:var(--medium)}.finding.low{border-left-color:var(--low)}.finding.info{border-left-color:var(--info)}.finding-topline{display:flex;align-items:center;gap:.65rem;margin-bottom:.55rem}.score{color:var(--muted);font-size:.8rem;font-weight:700}.finding p{margin-bottom:.65rem}.remediation{padding:.65rem .75rem;border-radius:.5rem;background:var(--surface-muted);font-size:.9rem}.finding-meta{display:flex;flex-wrap:wrap;gap:.35rem 1rem;margin:0;color:var(--muted);font-size:.78rem}.finding-meta div{min-width:10rem}.finding-meta dt{font-weight:750}.finding-meta dd{margin:0}.input-errors{padding:1rem;border:1px solid var(--critical);border-radius:.7rem;margin-top:1.5rem}.input-errors p{margin-bottom:.35rem}.empty-state{display:flex;flex-direction:column;gap:.25rem;padding:2rem;border:1px dashed var(--border);border-radius:.8rem;color:var(--muted)}a:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:3px}@media(max-width:700px){.hero{flex-direction:column}.score-card{text-align:left;min-width:0}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-card:last-child{grid-column:span 2}.tool-group{margin-left:0}.finding-meta{display:grid;grid-template-columns:1fr}.finding-meta div{min-width:0}}
+</style></head>
+<body><main><header class="hero"><div><p class="eyebrow">Offline static analysis</p><h1>ToolGuard security report</h1><p class="muted">Scanner ${escapeHtml(report.scannerVersion)} · rule set ${escapeHtml(report.ruleSetVersion)} · no network access used</p></div><div class="score-card"><span class="score-label">Maximum severity score</span><strong class="score-value">${escapeHtml(summary.maxScore)}<small>/100</small></strong><span class="status ${status}" role="status">${escapeHtml(statusLabel)}</span></div></header>
+<section class="summary-panel" aria-labelledby="summary-heading"><h2 id="summary-heading">Scan summary</h2><div class="summary-grid"><div class="summary-card"><strong>${summary.files}</strong><span>Files scanned</span></div><div class="summary-card"><strong>${summary.mcpServers}</strong><span>MCP servers</span></div><div class="summary-card"><strong>${summary.tools}</strong><span>Tools</span></div><div class="summary-card"><strong>${summary.findings}</strong><span>Findings</span></div><div class="summary-card"><strong>${summary.errors}</strong><span>Input errors</span></div></div><div class="severity-row" aria-label="Findings by severity">${severityCards}</div></section>
+<section aria-labelledby="findings-heading"><h2 id="findings-heading">Findings by file and tool</h2>${groupedFindingSections(report)}</section>${errors}
+</main></body></html>
 `;
 }
 
