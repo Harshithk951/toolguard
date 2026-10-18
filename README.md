@@ -30,6 +30,21 @@ toolguard scan examples/clean --format terminal
 The scan is offline by design: configured commands are never executed and URLs
 are never fetched.
 
+## Why this matters
+
+MCP makes tool descriptions and permissions part of an agent's execution
+boundary. A plausible-looking description, floating package, embedded token, or
+wildcard permission can quietly change what an agent is allowed to do. ToolGuard
+turns that metadata into a deterministic, reviewable artifact before it reaches
+runtime.
+
+The generated [sample malicious report](docs/index.html) shows the six risk
+families together. Regenerate it after changing the example with `npm run demo`.
+
+### Report screenshot placeholder
+
+![ToolGuard HTML report screenshot placeholder](docs/report-screenshot-placeholder.svg)
+
 ## Test
 
 Run the complete offline test suite with:

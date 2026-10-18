@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title description">
+  <title id="title">ToolGuard report screenshot placeholder</title>
+  <desc id="description">Placeholder illustration for a future screenshot of the ToolGuard HTML report.</desc>
+  <rect width="1200" height="650" fill="#f5f7fb"/>
+  <rect x="55" y="45" width="1090" height="560" rx="22" fill="#fff" stroke="#d7deea" stroke-width="3"/>
+  <rect x="90" y="82" width="660" height="24" rx="12" fill="#d7deea"/>
+  <rect x="90" y="125" width="430" height="16" rx="8" fill="#eef2f8"/>
+  <rect x="850" y="75" width="210" height="100" rx="16" fill="#eef2f8" stroke="#d7deea"/>
+  <text x="955" y="120" text-anchor="middle" font-family="system-ui,sans-serif" font-size="32" font-weight="700" fill="#172033">95/100</text>
+  <text x="955" y="148" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" fill="#58657a">severity score</text>
+  <rect x="90" y="195" width="1020" height="100" rx="14" fill="#eef2f8"/>
+  <rect x="90" y="325" width="1020" height="205" rx="14" fill="#fff" stroke="#d7deea" stroke-width="2"/>
+  <rect x="120" y="360" width="100" height="30" rx="15" fill="#fee4e2"/>
+  <rect x="240" y="365" width="330" height="18" rx="9" fill="#d7deea"/>
+  <rect x="120" y="415" width="850" height="14" rx="7" fill="#eef2f8"/>
+  <rect x="120" y="455" width="620" height="14" rx="7" fill="#eef2f8"/>
+  <text x="600" y="570" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="600" fill="#58657a">Screenshot placeholder — replace with a captured report view</text>
+</svg>
