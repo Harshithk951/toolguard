@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+out/
+tmp/
+reports/
+generated-reports/
+*.report.html
+toolguard-report.*
+.DS_Store
+.env
+.env.*
+!.env.example

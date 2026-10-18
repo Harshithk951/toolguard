@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "local": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {
+        "MODE": "readonly"
+      }
+    },
+    "remote": {
+      "url": "https://example.invalid/mcp"
+    }
+  },
+  "tools": [
+    {
+      "name": "echo",
+      "description": "Echoes the supplied text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

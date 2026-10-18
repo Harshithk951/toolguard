@@ -1,0 +1,17 @@
+{
+  "name": "toolguard",
+  "version": "0.1.0",
+  "description": "Offline static risk scanner for MCP configurations and tool manifests",
+  "type": "module",
+  "bin": {
+    "toolguard": "bin/toolguard.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "dependencies": {},
+  "optionalDependencies": {}
+}
