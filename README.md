@@ -95,3 +95,25 @@ For a fully offline rebuild using a locally cached base image, use:
 docker build --pull=false --network=none -t toolguard:22-offline .
 docker run --rm --network=none toolguard:22-offline npm test
 ```
+
+## GitHub Actions
+
+This short workflow runs the tests and scans a checked-in MCP configuration in
+CI. Replace `examples/clean` with the directory your project wants to guard.
+
+```yaml
+name: ToolGuard
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: node bin/toolguard.js scan examples/clean --format terminal
+```
