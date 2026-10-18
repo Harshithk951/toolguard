@@ -7,7 +7,8 @@
     "toolguard": "bin/toolguard.js"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "demo": "node scripts/generate-demo.mjs"
   },
   "engines": {
     "node": ">=22 <23"

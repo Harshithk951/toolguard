@@ -158,7 +158,7 @@ function htmlReport(report) {
 `;
 }
 
-function render(report, format) {
+export function render(report, format) {
   if (format === 'json') return `${JSON.stringify(report, null, 2)}\n`;
   if (format === 'html') return htmlReport(report);
   return terminalReport(report);

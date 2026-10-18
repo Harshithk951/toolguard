@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>ToolGuard security report</title>
+<style>
+:root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb;color:#172033;line-height:1.5;--surface:#fff;--surface-muted:#eef2f8;--border:#d7deea;--muted:#58657a;--shadow:0 12px 36px #27324d14;--critical:#b42318;--high:#c4320a;--medium:#9a6700;--low:#175cd3;--info:#475467;--focus:#175cd3}
+@media(prefers-color-scheme:dark){:root{background:#101522;color:#edf2fa;--surface:#171e2d;--surface-muted:#202a3b;--border:#354157;--muted:#aab6c9;--shadow:0 12px 36px #0006;--critical:#ff8178;--high:#ff9b70;--medium:#f5c451;--low:#84adff;--info:#b8c4d8;--focus:#9dbdff}}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:0 auto;padding:clamp(1rem,4vw,3rem) clamp(1rem,4vw,2rem)}h1,h2,h3,h4,h5,p{margin-top:0}h1{font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-.04em;margin-bottom:.35rem}h2{font-size:1.35rem;margin-bottom:1rem}h3{font-size:1rem;margin-bottom:1rem}h4{font-size:1rem;margin-bottom:.8rem}h5{font-size:1rem;margin:0 0 .45rem}.muted,.meta{color:var(--muted)}code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;overflow-wrap:anywhere}.hero{display:flex;align-items:stretch;justify-content:space-between;gap:1.5rem;margin-bottom:1.5rem}.eyebrow,.section-kicker{color:var(--muted);font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.eyebrow{margin-bottom:.4rem}.score-card{min-width:190px;padding:1rem 1.15rem;border:1px solid var(--border);border-radius:1rem;background:var(--surface);box-shadow:var(--shadow);text-align:right}.score-label{display:block;color:var(--muted);font-size:.78rem}.score-value{display:block;font-size:2.3rem;letter-spacing:-.05em;line-height:1.1}.score-value small{font-size:.95rem;color:var(--muted);letter-spacing:0}.status{display:inline-block;margin-top:.55rem;font-size:.78rem;font-weight:800}.status.pass{color:#087443}.status.review{color:var(--high)}.status.error{color:var(--critical)}.summary-panel{padding:1rem;border:1px solid var(--border);border-radius:1rem;background:var(--surface);box-shadow:var(--shadow);margin-bottom:2rem}.summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.75rem}.summary-card{padding:.85rem;border:1px solid var(--border);border-radius:.7rem;background:var(--surface-muted)}.summary-card strong{display:block;font-size:1.55rem;line-height:1.15}.summary-card span{color:var(--muted);font-size:.82rem}.severity-row{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}.severity-count{display:flex;align-items:center;gap:.4rem}.severity-count strong{font-size:1rem}.badge{display:inline-flex;align-items:center;min-height:1.5rem;padding:.18rem .55rem;border-radius:999px;font-size:.72rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase}.badge.critical{background:#fee4e2;color:var(--critical)}.badge.high{background:#ffeadf;color:var(--high)}.badge.medium{background:#fff4cc;color:var(--medium)}.badge.low{background:#e0ecff;color:var(--low)}.badge.info{background:#eaecf0;color:var(--info)}.file-group{margin:0 0 2rem}.file-group>h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:.65rem;padding-bottom:.7rem;border-bottom:2px solid var(--border)}.section-kicker{font-size:.65rem}.tool-group{margin:1rem 0 1.25rem 1rem}.finding{padding:1rem 1.1rem;margin:.75rem 0;border:1px solid var(--border);border-left:.3rem solid var(--info);border-radius:.7rem;background:var(--surface);box-shadow:0 4px 14px #27324d0b}.finding.critical{border-left-color:var(--critical)}.finding.high{border-left-color:var(--high)}.finding.medium{border-left-color:var(--medium)}.finding.low{border-left-color:var(--low)}.finding.info{border-left-color:var(--info)}.finding-topline{display:flex;align-items:center;gap:.65rem;margin-bottom:.55rem}.score{color:var(--muted);font-size:.8rem;font-weight:700}.finding p{margin-bottom:.65rem}.remediation{padding:.65rem .75rem;border-radius:.5rem;background:var(--surface-muted);font-size:.9rem}.finding-meta{display:flex;flex-wrap:wrap;gap:.35rem 1rem;margin:0;color:var(--muted);font-size:.78rem}.finding-meta div{min-width:10rem}.finding-meta dt{font-weight:750}.finding-meta dd{margin:0}.input-errors{padding:1rem;border:1px solid var(--critical);border-radius:.7rem;margin-top:1.5rem}.input-errors p{margin-bottom:.35rem}.empty-state{display:flex;flex-direction:column;gap:.25rem;padding:2rem;border:1px dashed var(--border);border-radius:.8rem;color:var(--muted)}a:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:3px}@media(max-width:700px){.hero{flex-direction:column}.score-card{text-align:left;min-width:0}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-card:last-child{grid-column:span 2}.tool-group{margin-left:0}.finding-meta{display:grid;grid-template-columns:1fr}.finding-meta div{min-width:0}}
+</style></head>
+<body><main><header class="hero"><div><p class="eyebrow">Offline static analysis</p><h1>ToolGuard security report</h1><p class="muted">Scanner 0.1.0 · rule set 1 · no network access used</p></div><div class="score-card"><span class="score-label">Maximum severity score</span><strong class="score-value">95<small>/100</small></strong><span class="status review" role="status">Review required</span></div></header>
+<section class="summary-panel" aria-labelledby="summary-heading"><h2 id="summary-heading">Scan summary</h2><div class="summary-grid"><div class="summary-card"><strong>1</strong><span>Files scanned</span></div><div class="summary-card"><strong>2</strong><span>MCP servers</span></div><div class="summary-card"><strong>2</strong><span>Tools</span></div><div class="summary-card"><strong>9</strong><span>Findings</span></div><div class="summary-card"><strong>0</strong><span>Input errors</span></div></div><div class="severity-row" aria-label="Findings by severity"><div class="severity-count"><span class="badge critical">critical</span><strong>2</strong></div><div class="severity-count"><span class="badge high">high</span><strong>3</strong></div><div class="severity-count"><span class="badge medium">medium</span><strong>3</strong></div><div class="severity-count"><span class="badge low">low</span><strong>1</strong></div><div class="severity-count"><span class="badge info">info</span><strong>0</strong></div></div></section>
+<section aria-labelledby="findings-heading"><h2 id="findings-heading">Findings by file and tool</h2><section class="file-group" aria-labelledby="file-examples-malicious-mcp-json" id="group-file-examples-malicious-mcp-json">
+  <h3 id="file-examples-malicious-mcp-json"><span class="section-kicker">File</span><code>examples/malicious/mcp.json</code></h3>
+  <section class="tool-group"><h4>Server and configuration settings</h4><article class="finding low">
+  <div class="finding-topline"><span class="badge low">low</span><span class="score">Score 35/100</span></div>
+  <h5>TG.PACKAGE.FLOATING_VERSION</h5>
+  <p>A package or executable reference is not pinned to an immutable version.</p>
+  <p class="remediation"><strong>Remediation:</strong> Pin packages to an exact version, commit hash, or image digest.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/args</code></dd></div><div><dt>Category</dt><dd>unpinned-package</dd></div><div><dt>Confidence</dt><dd>high</dd></div></dl>
+</article>
+<article class="finding critical">
+  <div class="finding-topline"><span class="badge critical">critical</span><span class="score">Score 95/100</span></div>
+  <h5>TG.SECRET.LITERAL</h5>
+  <p>A likely hardcoded secret appears in a configuration value.</p>
+  <p class="remediation"><strong>Remediation:</strong> Use an environment-variable reference or external secret store instead of a literal secret.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/env/API_TOKEN</code></dd></div><div><dt>Category</dt><dd>hardcoded-secret</dd></div><div><dt>Confidence</dt><dd>high</dd></div></dl>
+</article>
+<article class="finding medium">
+  <div class="finding-topline"><span class="badge medium">medium</span><span class="score">Score 55/100</span></div>
+  <h5>TG.PERMISSION.BROAD_SCOPE</h5>
+  <p>A permission value grants a broad filesystem, network, or process scope.</p>
+  <p class="remediation"><strong>Remediation:</strong> Replace wildcard, root, shell, or administrator access with the narrowest required scope.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/permissions/filesystem</code></dd></div><div><dt>Category</dt><dd>over-broad-permission</dd></div><div><dt>Confidence</dt><dd>high</dd></div></dl>
+</article>
+<article class="finding high">
+  <div class="finding-topline"><span class="badge high">high</span><span class="score">Score 75/100</span></div>
+  <h5>TG.PERMISSION.BROAD_SCOPE</h5>
+  <p>A permission value grants a broad filesystem, network, or process scope.</p>
+  <p class="remediation"><strong>Remediation:</strong> Replace wildcard, root, shell, or administrator access with the narrowest required scope.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/permissions/shell</code></dd></div><div><dt>Category</dt><dd>over-broad-permission</dd></div><div><dt>Confidence</dt><dd>high</dd></div></dl>
+</article>
+<article class="finding high">
+  <div class="finding-topline"><span class="badge high">high</span><span class="score">Score 80/100</span></div>
+  <h5>TG.SECRET.URL_CREDENTIAL</h5>
+  <p>A URL contains embedded credentials or a secret-like query parameter.</p>
+  <p class="remediation"><strong>Remediation:</strong> Move credentials to an environment reference or external secret store.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/url</code></dd></div><div><dt>Category</dt><dd>hardcoded-secret</dd></div><div><dt>Confidence</dt><dd>high</dd></div></dl>
+</article>
+<article class="finding critical">
+  <div class="finding-topline"><span class="badge critical">critical</span><span class="score">Score 90/100</span></div>
+  <h5>TG.URL.SUSPICIOUS</h5>
+  <p>A configured URL has characteristics that deserve security review.</p>
+  <p class="remediation"><strong>Remediation:</strong> Verify the endpoint, use HTTPS where applicable, and avoid embedding credentials or secrets in URLs.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/url</code></dd></div><div><dt>Category</dt><dd>suspicious-url</dd></div><div><dt>Confidence</dt><dd>high</dd></div></dl>
+</article></section>
+<section class="tool-group"><h4>Tool: read-file</h4><article class="finding medium">
+  <div class="finding-topline"><span class="badge medium">medium</span><span class="score">Score 60/100</span></div>
+  <h5>TG.TOOL.NAME_COLLISION</h5>
+  <p>Tool names collide after Unicode, case, or separator normalization.</p>
+  <p class="remediation"><strong>Remediation:</strong> Use unique tool names or explicit server namespaces to prevent ambiguous dispatch.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/tools/0</code></dd></div><div><dt>Category</dt><dd>cross-tool-shadowing</dd></div><div><dt>Confidence</dt><dd>high</dd></div><div><dt>Server</dt><dd>untrusted-helper</dd></div></dl>
+</article>
+<article class="finding medium">
+  <div class="finding-topline"><span class="badge medium">medium</span><span class="score">Score 60/100</span></div>
+  <h5>TG.TOOL.SHADOW_DIRECTIVE</h5>
+  <p>A tool description directs callers to replace or avoid another tool.</p>
+  <p class="remediation"><strong>Remediation:</strong> Treat tool descriptions as untrusted metadata and remove dispatch-manipulating directives.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/tools/0</code></dd></div><div><dt>Category</dt><dd>cross-tool-shadowing</dd></div><div><dt>Confidence</dt><dd>high</dd></div><div><dt>Server</dt><dd>untrusted-helper</dd></div></dl>
+</article>
+<article class="finding high">
+  <div class="finding-topline"><span class="badge high">high</span><span class="score">Score 80/100</span></div>
+  <h5>TG.INSTRUCTION.PROMPT_OVERRIDE</h5>
+  <p>Tool content contains language that attempts to control instructions or tool selection.</p>
+  <p class="remediation"><strong>Remediation:</strong> Review the description as untrusted content and remove instruction-like directives.</p>
+  <dl class="finding-meta"><div><dt>Location</dt><dd><code>examples/malicious/mcp.json/mcpServers/untrusted-helper/tools/0/description</code></dd></div><div><dt>Category</dt><dd>hidden-instruction</dd></div><div><dt>Confidence</dt><dd>high</dd></div><div><dt>Server</dt><dd>untrusted-helper</dd></div></dl>
+</article></section>
+</section></section>
+</main></body></html>

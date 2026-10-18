@@ -10,3 +10,5 @@ toolguard-report.*
 .env
 .env.*
 !.env.example
+!docs/
+!docs/index.html
