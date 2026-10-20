@@ -371,5 +371,3 @@ ToolGuard/
 | `docker build --pull=false --network=none -t toolguard:22-offline .` | Attempt an offline build using locally cached inputs |
 
 ---
-
-**Final verification before submission:** confirm the actual rule catalog, test counts, malicious-scan output, sample-report path, and npm scripts against the final repository. These details should be reported from actual source and command output, not guessed.
